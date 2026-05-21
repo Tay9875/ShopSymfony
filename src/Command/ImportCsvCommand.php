@@ -25,6 +25,9 @@ Créez une commande app:import-produits qui :
     Supporte --format=table|json pour la sortie
 
 */
+
+// A CONTINUER DE CORRIGER
+
 #[AsCommand(
     name: 'app:import-produits',
     description: 'Import les donnees d un fichier CSV',
@@ -64,6 +67,8 @@ class ImportCsvCommand extends Command
 
         while (($ligne = fgetcsv($file, 0, ';')) !== false) {
             if (empty(array_filter($ligne))) {
+                $io->warning("Données manquantes, le produit a été ignoré.");
+                $erreurs++;    
                 continue;
             }
             $data = array_combine($headers, $ligne);
@@ -73,6 +78,11 @@ class ImportCsvCommand extends Command
 
             if (!$produit) {
                 $produit = new Produit();
+                $crees++;
+                $io->info("Création du produit : " . $data['Reference']);
+            } else {
+                $majCount++;
+                $io->info("Mise à jour du produit : " . $data['Reference']);
             }
 
             $produit->setReference($data['Reference']);
@@ -83,9 +93,12 @@ class ImportCsvCommand extends Command
         }
 
         fclose($file);
-        $this->em->flush();
 
-        // Sortie: Tableau récapitulatif ou format json
+        if($crees > 0 || $majCount > 0) {
+            $io->info("Enregistrement en base...");
+            $this->em->flush();
+        }
+        
         if ($format === 'json') {
             $output->writeln(json_encode([
                 'créés' => $crees,
